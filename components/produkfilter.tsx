@@ -11,25 +11,33 @@ type Props = {
   min?: number;
   max?: number;
   urut: Urutan;
+  basePath?: string; // halaman tujuan form/link, default "/"
 };
 
-// Membuat URL "/?kategori=..&min=..", parameter kosong dibuang.
-function buildHref(p: Record<string, string | number | undefined>) {
+// Membuat URL "basePath?kategori=..&min=..", parameter kosong dibuang.
+function buildHref(basePath: string, p: Record<string, string | number | undefined>) {
   const sp = new URLSearchParams();
   for (const [key, value] of Object.entries(p)) {
     if (value !== undefined && value !== "") sp.set(key, String(value));
   }
   const qs = sp.toString();
-  return qs ? `/?${qs}` : "/";
+  return qs ? `${basePath}?${qs}` : basePath;
 }
 
-export default function ProdukFilter({ kategori, aktif, min, max, urut }: Props) {
+export default function ProdukFilter({
+  kategori,
+  aktif,
+  min,
+  max,
+  urut,
+  basePath = "/",
+}: Props) {
   const adaFilter =
     Boolean(aktif) || min !== undefined || max !== undefined || urut !== "terbaru";
 
   // Pindah kategori tanpa menghapus filter harga dan urutan.
   const hrefKategori = (slug?: string) =>
-    buildHref({
+    buildHref(basePath, {
       kategori: slug,
       min,
       max,
@@ -66,7 +74,7 @@ export default function ProdukFilter({ kategori, aktif, min, max, urut }: Props)
       )}
 
       {/* Form GET biasa: tidak butuh JavaScript, hasilnya jadi query string di URL. */}
-      <form action="/" method="get" className="space-y-4">
+      <form action={basePath} method="get" className="space-y-4">
         {aktif && <input type="hidden" name="kategori" value={aktif} />}
 
         <section>
@@ -109,7 +117,7 @@ export default function ProdukFilter({ kategori, aktif, min, max, urut }: Props)
 
       {adaFilter && (
         <Link
-          href="/"
+          href={basePath}
           className="block text-center text-sm text-muted underline hover:text-ink"
         >
           Reset filter

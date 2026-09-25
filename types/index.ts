@@ -1,3 +1,4 @@
+// File: types/index.ts
 export interface Admin {
   id: number;
   nama: string;
@@ -40,4 +41,12 @@ export interface NewProduk {
 export interface SessionPayload {
   adminId: number;
   nama: string;
+}
+
+export interface Banner {
+  id: number;
+  gambar_url: string;
+  judul: string | null;
+  link_url: string | null;
+  urutan: number;
 }

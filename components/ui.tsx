@@ -103,8 +103,34 @@ export function SiteHeader() {
         <Link href="/" className="text-xl font-bold tracking-tight text-ink">
           kape<span className="text-brand">dodolan</span>
         </Link>
+        <nav aria-label="Navigasi utama" className="flex items-center gap-4">
+          <Link
+            href="/"
+            className="hidden text-sm font-medium text-muted hover:text-ink sm:block"
+          >
+            Beranda
+          </Link>
+          <Link href="/produk" className={buttonClass("primary", "px-4 py-2")}>
+            Semua Produk
+          </Link>
+        </nav>
       </Container>
     </header>
+  );
+}
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t border-line py-8">
+      <Container className="flex flex-col items-center gap-1 text-center text-sm text-muted">
+        <p>
+          <span className="font-semibold text-ink">kape</span>
+          <span className="font-semibold text-brand">dodolan</span> &middot; belanja
+          mudah, langsung lewat Shopee.
+        </p>
+        <p>&copy; {new Date().getFullYear()} Semua hak dilindungi.</p>
+      </Container>
+    </footer>
   );
 }
 

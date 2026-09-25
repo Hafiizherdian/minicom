@@ -21,7 +21,7 @@ export function pgCode(err: unknown) {
 }
 
 // Hanya http/https, supaya tidak ada `javascript:` masuk ke atribut href.
-function isHttpUrl(value: string) {
+export function isHttpUrl(value: string) {
   try {
     const { protocol } = new URL(value);
     return protocol === "https:" || protocol === "http:";
@@ -77,4 +77,30 @@ export function parseProdukForm(
     data: { kategori_id, nama, deskripsi, harga, shopee_url, is_available },
     file,
   };
+}
+
+export type BannerInput = { judul: string | null; link_url: string | null };
+
+// Dipakai oleh POST /api/banner. Gambar selalu wajib (banner tanpa gambar tidak berguna).
+export function parseBannerForm(
+  form: FormData,
+): { error: string } | { data: BannerInput; file: File } {
+  const judul = String(form.get("judul") ?? "").trim() || null;
+  const linkRaw = String(form.get("link_url") ?? "").trim();
+  const link_url = linkRaw || null;
+
+  if (judul && judul.length > 150) return { error: "Judul maksimal 150 karakter" };
+  if (link_url) {
+    const internal = link_url.startsWith("/");
+    if (link_url.length > 255 || (!internal && !isHttpUrl(link_url))) {
+      return { error: "Link harus berupa URL http/https yang valid, atau path internal seperti /produk" };
+    }
+  }
+
+  const raw = form.get("gambar");
+  if (!(raw instanceof File) || raw.size === 0) return { error: "Gambar wajib diunggah" };
+  const imageError = validateImage(raw);
+  if (imageError) return { error: imageError };
+
+  return { data: { judul, link_url }, file: raw };
 }

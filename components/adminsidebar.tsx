@@ -11,6 +11,7 @@ const ICON = {
   produk: "M21 8l-9-5-9 5v8l9 5 9-5V8zM3.3 7.7L12 12.5l8.7-4.8M12 12.5V22",
   tambah: "M12 8v8M8 12h8M12 21a9 9 0 100-18 9 9 0 000 18z",
   kategori: "M20.6 13.4l-7.2 7.2a2 2 0 01-2.8 0L3 13V3h10l7.6 7.6a2 2 0 010 2.8zM7.5 7.5h.01",
+  banner: "M4 5h16v14H4V5zM7 16l3-4 2.5 3L15 11l4 5H7zM8.5 9.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3z",
   toko: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5",
   keluar: "M15 4h3a1 1 0 011 1v14a1 1 0 01-1 1h-3M10 16l-4-4 4-4M6 12h11",
   menu: "M4 6h16M4 12h16M4 18h16",
@@ -36,6 +37,12 @@ const MENU = [
     label: "Kategori",
     icon: ICON.kategori,
     aktif: (p: string) => p.startsWith(`${BASE}/kategori`),
+  },
+  {
+    href: `${BASE}/banner`,
+    label: "Banner",
+    icon: ICON.banner,
+    aktif: (p: string) => p.startsWith(`${BASE}/banner`),
   },
 ];
 

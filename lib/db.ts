@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { Pool, type QueryResultRow } from "pg";
-import type { Admin, Kategori, NewProduk, Produk } from "@/types";
+import type { Admin, Banner, Kategori, NewProduk, Produk } from "@/types";
 
 // Satu pool untuk seluruh proses. Di dev, hot reload membuat modul ini
 // dievaluasi ulang, jadi pool disimpan di globalThis agar koneksi tidak menumpuk.
@@ -38,6 +38,7 @@ export type FilterProduk = {
   min?: number;
   max?: number;
   urut?: "terbaru" | "termurah" | "termahal";
+  limit?: number; // dipakai landing page untuk daftar "produk terbaru"
 };
 
 // Nama kolom di ORDER BY tidak bisa jadi parameter ($1), jadi dipilih dari daftar tetap ini.
@@ -64,12 +65,16 @@ export async function getProdukTersedia(filter: FilterProduk = {}) {
     where.push(`p.harga <= $${params.length}`);
   }
 
-  return query<Produk>(
-    `${PRODUK_SELECT}
+  let sql = `${PRODUK_SELECT}
      WHERE ${where.join(" AND ")}
-     ORDER BY ${URUTAN[filter.urut ?? "terbaru"]}`,
-    params,
-  );
+     ORDER BY ${URUTAN[filter.urut ?? "terbaru"]}`;
+
+  if (filter.limit !== undefined) {
+    params.push(filter.limit);
+    sql += ` LIMIT $${params.length}`;
+  }
+
+  return query<Produk>(sql, params);
 }
 
 // cache() dari React: generateMetadata dan page memanggil fungsi ini,
@@ -138,6 +143,7 @@ export async function deleteProduk(id: number) {
 }
 
 // ---------- Kategori (Admin CRUD) ----------
+// getKategoriDenganJumlah juga dipakai landing page untuk "Kategori pilihan".
 
 export type KategoriJumlah = Kategori & { jumlah: number };
 
@@ -191,4 +197,75 @@ export async function deleteKategori(id: number) {
     [id],
   );
   return rows.length > 0;
+}
+
+// ---------- Banner (slider di landing page) ----------
+
+export async function getBanner() {
+  return query<Banner>(
+    `SELECT id, gambar_url, judul, link_url, urutan FROM banner ORDER BY urutan ASC, id ASC`,
+  );
+}
+
+export async function createBanner(data: {
+  gambar_url: string;
+  judul: string | null;
+  link_url: string | null;
+}) {
+  const urutanRows = await query<{ berikutnya: number }>(
+    `SELECT COALESCE(MAX(urutan), -1) + 1 AS berikutnya FROM banner`,
+  );
+  const urutan = urutanRows[0].berikutnya;
+
+  const rows = await query<Banner>(
+    `INSERT INTO banner (gambar_url, judul, link_url, urutan)
+     VALUES ($1, $2, $3, $4)
+     RETURNING id, gambar_url, judul, link_url, urutan`,
+    [data.gambar_url, data.judul, data.link_url, urutan],
+  );
+  return rows[0];
+}
+
+// Mengembalikan gambar_url supaya file-nya bisa ikut dihapus.
+export async function deleteBanner(id: number) {
+  const rows = await query<{ gambar_url: string }>(
+    `DELETE FROM banner WHERE id = $1 RETURNING gambar_url`,
+    [id],
+  );
+  return rows[0]?.gambar_url ?? null;
+}
+
+// Menukar "urutan" dengan tetangganya (naik = ke atas, turun = ke bawah).
+// Pakai transaksi supaya dua UPDATE ini tidak diselingi permintaan lain.
+export async function pindahBanner(id: number, arah: "naik" | "turun") {
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL belum diset. Buat .env.local lalu restart npm run dev.");
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const { rows } = await client.query<{ id: number; urutan: number }>(
+      `SELECT id, urutan FROM banner ORDER BY urutan ASC, id ASC FOR UPDATE`,
+    );
+
+    const idx = rows.findIndex((r) => r.id === id);
+    const target = arah === "naik" ? idx - 1 : idx + 1;
+    if (idx === -1 || target < 0 || target >= rows.length) {
+      await client.query("ROLLBACK");
+      return false;
+    }
+
+    const a = rows[idx];
+    const b = rows[target];
+    await client.query(`UPDATE banner SET urutan = $2 WHERE id = $1`, [a.id, b.urutan]);
+    await client.query(`UPDATE banner SET urutan = $2 WHERE id = $1`, [b.id, a.urutan]);
+    await client.query("COMMIT");
+    return true;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }

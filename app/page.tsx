@@ -1,130 +1,111 @@
 // File: app/page.tsx
 import Link from "next/link";
+import BannerSlider from "@/components/bannerslider";
 import ProdukCard from "@/components/produkcard";
-import ProdukFilter, { type Urutan } from "@/components/produkfilter";
-import { Banner, SiteHeader } from "@/components/ui";
-import { getKategori, getProdukTersedia } from "@/lib/db";
+import { Banner, buttonClass, Container, SiteFooter, SiteHeader } from "@/components/ui";
+import { getBanner, getKategoriDenganJumlah, getProdukTersedia } from "@/lib/db";
 
 // Data produk berubah dari admin, dan build tidak boleh membutuhkan koneksi DB.
 export const dynamic = "force-dynamic";
 
-type Param = string | string[] | undefined;
+const JUMLAH_TERBARU = 8;
+const JUMLAH_KATEGORI = 6;
 
-const URUTAN: Urutan[] = ["terbaru", "termurah", "termahal"];
-const MAKS_HARGA = 2_000_000_000; // di bawah batas INTEGER Postgres (2,147,483,647)
-
-const satu = (v: Param) => (Array.isArray(v) ? v[0] : v);
-
-function angka(v: Param) {
-  const s = satu(v);
-  if (!s) return undefined;
-  const n = Number(s);
-  return Number.isInteger(n) && n >= 0 && n <= MAKS_HARGA ? n : undefined;
-}
-
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{
-    kategori?: Param;
-    min?: Param;
-    max?: Param;
-    urut?: Param;
-  }>;
-}) {
-  const sp = await searchParams;
-
-  // Semua input dari URL divalidasi dulu sebelum masuk ke query.
-  const kategoriSlug = satu(sp.kategori) || undefined;
-  const min = angka(sp.min);
-  const max = angka(sp.max);
-  const urutRaw = satu(sp.urut);
-  const urut: Urutan = URUTAN.includes(urutRaw as Urutan)
-    ? (urutRaw as Urutan)
-    : "terbaru";
-
-  const adaFilter =
-    Boolean(kategoriSlug) ||
-    min !== undefined ||
-    max !== undefined ||
-    urut !== "terbaru";
-
-  // Query langsung di server, hasilnya dirender jadi HTML.
-  const [produk, daftarKategori] = await Promise.all([
-    getProdukTersedia({ kategori: kategoriSlug, min, max, urut }),
-    getKategori(),
+export default async function LandingPage() {
+  const [produkTerbaru, semuaKategori, banner] = await Promise.all([
+    getProdukTersedia({ urut: "terbaru", limit: JUMLAH_TERBARU }),
+    getKategoriDenganJumlah(),
+    getBanner(),
   ]);
 
-  const namaKategori = daftarKategori.find((k) => k.slug === kategoriSlug)?.nama;
-  const filterProps = { kategori: daftarKategori, aktif: kategoriSlug, min, max, urut };
+  // Hanya kategori yang punya produk yang ditampilkan sebagai pintasan.
+  const kategoriUnggulan = semuaKategori
+    .filter((k) => k.jumlah > 0)
+    .slice(0, JUMLAH_KATEGORI);
 
   return (
     <>
       <SiteHeader />
+      <main className="flex-1">
+        <Container className="py-8 sm:py-12">
+          {banner.length > 0 ? (
+            <BannerSlider items={banner} />
+          ) : (
+            <Banner
+              title="Selamat Datang di (jeneng e toko)"
+              description="Temukan produk terbaik dengan harga terbaik hanya di sini. Pesan langsung, bayar aman lewat Shopee."
+              action={{ label: "Jelajahi Produk", href: "/produk" }}
+            />
+          )}
+        </Container>
 
-      {/* Tablet & desktop: rail filter menempel di tepi kiri layar, konten di kanan.
-          Mobile: kolom biasa, filter jadi panel buka-tutup. */}
-      <div className="flex flex-1 flex-col md:flex-row">
-        {/* Mobile */}
-        <details className="mx-4 mt-4 rounded-xl border border-line p-4 sm:mx-6 md:hidden">
-          <summary className="cursor-pointer text-sm font-semibold text-ink">
-            Filter{adaFilter ? " (aktif)" : ""}
-          </summary>
-          <div className="mt-4">
-            <ProdukFilter {...filterProps} />
+        {kategoriUnggulan.length > 0 && (
+          <Container className="py-6">
+            <div className="flex items-baseline justify-between gap-4">
+              <h2 className="text-2xl font-bold tracking-tight text-ink">
+                Kategori pilihan
+              </h2>
+              <Link
+                href="/produk"
+                className="shrink-0 text-sm font-medium text-muted hover:text-ink"
+              >
+                Lihat semua
+              </Link>
+            </div>
+
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {kategoriUnggulan.map((k) => (
+                <Link
+                  key={k.id}
+                  href={`/produk?kategori=${k.slug}`}
+                  className="rounded-xl border border-line p-4 text-center transition hover:border-ink hover:bg-line/20"
+                >
+                  <p className="font-semibold text-ink">{k.nama}</p>
+                  <p className="mt-1 text-xs text-muted">{k.jumlah} produk</p>
+                </Link>
+              ))}
+            </div>
+          </Container>
+        )}
+
+        <Container className="py-8">
+          <div className="flex items-baseline justify-between gap-4">
+            <h2 className="text-2xl font-bold tracking-tight text-ink">
+              Produk terbaru
+            </h2>
+            <Link
+              href="/produk"
+              className="shrink-0 text-sm font-medium text-muted hover:text-ink"
+            >
+              Lihat semua
+            </Link>
           </div>
-        </details>
 
-        {/* Tablet & desktop: aside setinggi konten (garis kanan penuh),
-            isinya sticky supaya ikut terlihat saat scroll */}
-        <aside className="hidden md:block md:w-60 md:shrink-0 md:border-r md:border-line lg:w-64">
-          <div className="md:sticky md:top-0 md:max-h-screen md:overflow-y-auto md:p-6">
-            <ProdukFilter {...filterProps} />
-          </div>
-        </aside>
-
-        <main className="min-w-0 flex-1 px-4 py-8 sm:px-6 lg:px-8">
-          {!adaFilter && (
-            <div className="mb-10">
-              <Banner
-                title="Selamat Datang di (jeneng e toko)"
-                description="Temukan produk terbaik dengan harga terbaik hanya di sini."
-                action={{ label: "Jelajahi Produk", href: "#produk" }}
-              />
+          {produkTerbaru.length === 0 ? (
+            <p className="mt-10 text-center text-muted">Belum ada produk.</p>
+          ) : (
+            <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {produkTerbaru.map((p) => (
+                <ProdukCard key={p.id} produk={p} />
+              ))}
             </div>
           )}
+        </Container>
 
-          <section id="produk" className="scroll-mt-6">
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 className="text-3xl font-bold tracking-tight text-ink">
-                {namaKategori ?? "Semua produk"}
-              </h2>
-              <p className="shrink-0 text-sm text-muted">{produk.length} produk</p>
-            </div>
-
-            {produk.length === 0 ? (
-              <div className="mt-16 text-center text-muted">
-                <p>
-                  {adaFilter
-                    ? "Tidak ada produk yang cocok dengan filter ini."
-                    : "Belum ada produk."}
-                </p>
-                {adaFilter && (
-                  <Link href="/" className="mt-2 inline-block underline hover:text-ink">
-                    Reset filter
-                  </Link>
-                )}
-              </div>
-            ) : (
-              <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                {produk.map((p) => (
-                  <ProdukCard key={p.id} produk={p} />
-                ))}
-              </div>
-            )}
-          </section>
-        </main>
-      </div>
+        <Container className="pb-14">
+          <div className="rounded-2xl bg-line/40 px-6 py-10 text-center sm:px-12">
+            <h2 className="text-2xl font-bold text-ink">Siap belanja?</h2>
+            <p className="mx-auto mt-2 max-w-md text-muted">
+              Semua produk bisa langsung dipesan dan dibayar lewat Shopee, aman dan
+              terpercaya.
+            </p>
+            <Link href="/produk" className={buttonClass("dark", "mt-6 px-6 py-3 text-base")}>
+              Mulai belanja
+            </Link>
+          </div>
+        </Container>
+      </main>
+      <SiteFooter />
     </>
   );
 }

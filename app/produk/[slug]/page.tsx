@@ -3,7 +3,14 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { BackButton, buttonClass, Container, rupiah, SiteHeader } from "@/components/ui";
+import {
+  BackButton,
+  buttonClass,
+  Container,
+  rupiah,
+  SiteFooter,
+  SiteHeader,
+} from "@/components/ui";
 import { getProdukBySlug } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +39,7 @@ export default async function ProdukPage({ params }: Props) {
       <SiteHeader />
       <main className="flex-1 py-8">
         <Container>
-          <BackButton href="/">Kembali ke semua produk</BackButton>
+          <BackButton href="/produk">Kembali ke semua produk</BackButton>
 
           <div className="mt-6 grid gap-8 md:grid-cols-2">
             <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-line">
@@ -50,7 +57,7 @@ export default async function ProdukPage({ params }: Props) {
             <div>
               {produk.kategori_nama && (
                 <Link
-                  href={`/?kategori=${produk.kategori_slug}`}
+                  href={`/produk?kategori=${produk.kategori_slug}`}
                   className="text-sm text-muted hover:text-ink"
                 >
                   {produk.kategori_nama}
@@ -83,6 +90,7 @@ export default async function ProdukPage({ params }: Props) {
           </div>
         </Container>
       </main>
+      <SiteFooter />
     </>
   );
 }
