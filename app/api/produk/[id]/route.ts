@@ -72,9 +72,10 @@ export async function DELETE(_request: Request, ctx: Ctx) {
   const id = parseId((await ctx.params).id);
   if (id === null) return bad("ID tidak valid");
 
-  const gambarUrl = await deleteProduk(id);
-  if (!gambarUrl) return notFound();
+  const hasil = await deleteProduk(id);
+  if (!hasil) return notFound();
 
-  await deleteImage(gambarUrl);
+  await deleteImage(hasil.utama);
+  await Promise.all(hasil.galeri.map((url) => deleteImage(url)));
   return Response.json({ ok: true });
 }

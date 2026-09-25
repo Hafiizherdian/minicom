@@ -36,6 +36,17 @@ CREATE TABLE IF NOT EXISTS banner (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Table 5: gambar/video
+CREATE TABLE produk_gambar (
+    id SERIAL PRIMARY KEY,
+    produk_id INTEGER NOT NULL REFERENCES produk(id) ON DELETE CASCADE,
+    gambar_url VARCHAR(255) NOT NULL,
+    tipe VARCHAR(10) NOT NULL DEFAULT 'image',  -- 'image' atau 'video'
+    urutan INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX idx_produk_gambar_produk_id ON produk_gambar (produk_id, urutan);
+
 CREATE INDEX IF NOT EXISTS idx_banner_urutan ON banner (urutan, id);
 
 -- Mempercepat query beranda: WHERE is_available = true ORDER BY created_at DESC

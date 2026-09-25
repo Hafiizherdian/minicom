@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { Pool, type QueryResultRow } from "pg";
-import type { Admin, Banner, Kategori, NewProduk, Produk } from "@/types";
+import type { Admin, Banner, Kategori, NewProduk, Produk, ProdukGambar, TipeMedia } from "@/types";
 
 // Satu pool untuk seluruh proses. Di dev, hot reload membuat modul ini
 // dievaluasi ulang, jadi pool disimpan di globalThis agar koneksi tidak menumpuk.
@@ -84,7 +84,10 @@ export const getProdukBySlug = cache(async (slug: string) => {
     `${PRODUK_SELECT} WHERE p.slug = $1 AND p.is_available = true`,
     [slug],
   );
-  return rows[0] ?? null;
+  const produk = rows[0];
+  if (!produk) return null;
+  produk.galeri = await getGaleriProduk(produk.id);
+  return produk;
 });
 
 export async function getKategori() {
@@ -135,11 +138,16 @@ export async function setProdukTersedia(id: number, isAvailable: boolean) {
 
 // Mengembalikan gambar_url supaya file-nya bisa ikut dihapus.
 export async function deleteProduk(id: number) {
+  const galeri = await query<{ gambar_url: string }>(
+    `SELECT gambar_url FROM produk_gambar WHERE produk_id = $1`,
+    [id],
+  );
   const rows = await query<{ gambar_url: string }>(
     `DELETE FROM produk WHERE id = $1 RETURNING gambar_url`,
     [id],
   );
-  return rows[0]?.gambar_url ?? null;
+  if (!rows[0]) return null;
+  return { utama: rows[0].gambar_url, galeri: galeri.map((g) => g.gambar_url) };
 }
 
 // ---------- Kategori (Admin CRUD) ----------
@@ -149,7 +157,10 @@ export type KategoriJumlah = Kategori & { jumlah: number };
 
 export async function getProdukById(id: number) {
   const rows = await query<Produk>(`${PRODUK_SELECT} WHERE p.id = $1`, [id]);
-  return rows[0] ?? null;
+  const produk = rows[0];
+  if (!produk) return null;
+  produk.galeri = await getGaleriProduk(id);
+  return produk;
 }
 
 // slug tidak ikut diubah supaya link produk lama tetap jalan
@@ -268,4 +279,35 @@ export async function pindahBanner(id: number, arah: "naik" | "turun") {
   } finally {
     client.release();
   }
+}
+
+// ProdukGambar: galeri untuk produk bisa gambar/video
+async function getGaleriProduk(produkId: number) {
+  return query<ProdukGambar>(
+    `SELECT id, gambar_url, tipe, urutan FROM produk_gambar
+     WHERE produk_id = $1 ORDER BY urutan ASC, id ASC`,
+    [produkId],
+  );
+}
+
+export async function tambahMediaProduk(produkId: number, url: string, tipe: TipeMedia) {
+  const rows = await query<{ berikutnya: number }>(
+    `SELECT COALESCE(MAX(urutan), -1) + 1 AS berikutnya
+     FROM produk_gambar WHERE produk_id = $1`,
+    [produkId],
+  );
+  const inserted = await query<ProdukGambar>(
+    `INSERT INTO produk_gambar (produk_id, gambar_url, tipe, urutan)
+     VALUES ($1, $2, $3, $4) RETURNING id, gambar_url, tipe, urutan`,
+    [produkId, url, tipe, rows[0].berikutnya],
+  );
+  return inserted[0];
+}
+
+export async function hapusMediaProduk(id: number) {
+  const rows = await query<{ gambar_url: string }>(
+    `DELETE FROM produk_gambar WHERE id = $1 RETURNING gambar_url`,
+    [id],
+  );
+  return rows[0]?.gambar_url ?? null;
 }

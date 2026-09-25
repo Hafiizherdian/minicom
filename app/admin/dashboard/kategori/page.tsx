@@ -11,7 +11,7 @@ export default async function KategoriPage() {
   return (
     <main className="py-8">
       <Container>
-        <div className="mx-auto max-w-2xl">
+        <div>
           <BackButton href="/admin/dashboard">Kembali ke daftar produk</BackButton>
           <h1 className="mb-6 mt-4 text-2xl font-bold text-ink">Kelola kategori</h1>
           <KategoriManager items={items} />

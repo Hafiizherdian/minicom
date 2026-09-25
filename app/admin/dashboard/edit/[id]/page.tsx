@@ -1,6 +1,7 @@
 // File: app/admin/dashboard/edit/[id]/page.tsx
 import { notFound } from "next/navigation";
 import ProdukForm from "@/components/produkform";
+import ProdukGaleri from "@/components/produkgaleri";
 import { BackButton, Container } from "@/components/ui";
 import { getKategori, getProdukById } from "@/lib/db";
 import { parseId } from "@/lib/validasi";
@@ -21,7 +22,7 @@ export default async function EditProdukPage({
   return (
     <main className="py-8">
       <Container>
-        <div className="mx-auto max-w-2xl">
+        <div>
           <BackButton href="/admin/dashboard">Kembali ke daftar produk</BackButton>
           <h1 className="mb-6 mt-4 text-2xl font-bold text-ink">Edit produk</h1>
           {/* Hanya field yang dibutuhkan form yang dioper ke client component */}
@@ -38,6 +39,9 @@ export default async function EditProdukPage({
               is_available: produk.is_available,
             }}
           />
+          <div className="mt-8">
+            <ProdukGaleri produkId={produk.id} items={produk.galeri ?? []} />
+          </div>
         </div>
       </Container>
     </main>

@@ -19,6 +19,7 @@ export interface Produk {
   deskripsi: string | null;
   harga: number;
   gambar_url: string;
+  galeri?: ProdukGambar[];
   shopee_url: string | null;
   is_available: boolean;
   created_at: Date;
@@ -48,5 +49,14 @@ export interface Banner {
   gambar_url: string;
   judul: string | null;
   link_url: string | null;
+  urutan: number;
+}
+
+export type TipeMedia = "image" | "video";
+
+export interface ProdukGambar {
+  id: number;
+  gambar_url: string;
+  tipe: TipeMedia;
   urutan: number;
 }

@@ -1,6 +1,5 @@
 // File: app/produk/[slug]/page.tsx
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -11,6 +10,7 @@ import {
   SiteFooter,
   SiteHeader,
 } from "@/components/ui";
+import ProdukGaleriViewer from "@/components/produkgaleriviewer";
 import { getProdukBySlug } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -42,17 +42,11 @@ export default async function ProdukPage({ params }: Props) {
           <BackButton href="/produk">Kembali ke semua produk</BackButton>
 
           <div className="mt-6 grid gap-8 md:grid-cols-2">
-            <div className="relative aspect-square overflow-hidden rounded-xl border border-line bg-line">
-              <Image
-                src={produk.gambar_url}
-                alt={produk.nama}
-                fill
-                unoptimized
-                priority
-                sizes="(min-width: 768px) 50vw, 100vw"
-                className="object-cover"
-              />
-            </div>
+            <ProdukGaleriViewer
+              nama={produk.nama}
+              gambarUtama={produk.gambar_url}
+              galeri={produk.galeri ?? []}
+            />
 
             <div>
               {produk.kategori_nama && (
